@@ -22,9 +22,30 @@ public:
 
   ~Tooling();
 
-  clang_utils::SourceTransformResult
-    squarets(
-      const clang_utils::SourceTransformOptions& sourceTransformOptions);
+  // extracts template code from annotated varible
+  void squarets(
+    const std::string& processedAnnotaion
+    , clang::AnnotateAttr* annotateAttr
+    , const clang_utils::MatchResult& matchResult
+    , clang::Rewriter& rewriter
+    , const clang::Decl* nodeDecl);
+
+  // extracts template code from file path
+  void squaretsFile(
+    const std::string& processedAnnotaion
+    , clang::AnnotateAttr* annotateAttr
+    , const clang_utils::MatchResult& matchResult
+    , clang::Rewriter& rewriter
+    , const clang::Decl* nodeDecl);
+
+  // executes arbitrary C++ code in Cling interpreter to
+  // get template code
+  void squaretsCodeAndReplace(
+    const std::string& processedAnnotaion
+    , clang::AnnotateAttr* annotateAttr
+    , const clang_utils::MatchResult& matchResult
+    , clang::Rewriter& rewriter
+    , const clang::Decl* nodeDecl);
 
 private:
   ::clang_utils::SourceTransformRules* sourceTransformRules_;

@@ -66,11 +66,11 @@ void FlexSquaretsEventHandler::StringCommand(
     if(event.split_parts[0] == kVersionCommand) {
       LOG(INFO)
         << kPluginDebugLogName
-        << " application version: "
+        << " version: "
         << kVersion;
       LOG(INFO)
         << kPluginDebugLogName
-        << " application build type: "
+        << " build type: "
         << APPLICATION_BUILD_TYPE;
     }
   }
@@ -101,16 +101,47 @@ void FlexSquaretsEventHandler::RegisterAnnotationMethods(
   ::clang_utils::SourceTransformRules& sourceTransformRules
     = sourceTransformPipeline.sourceTransformRules;
 
+  DCHECK(event.annotationMethods);
+  ::flexlib::AnnotationMethods& annotationMethods
+    = *event.annotationMethods;
+
   {
     VLOG(9)
-      << "registered source transform rule:"
+      << "registered annotation method:"
          " squarets";
     CHECK(tooling_);
-    sourceTransformRules["squarets"] =
+    annotationMethods["{squarets};"] =
       base::BindRepeating(
         &Tooling::squarets
         , base::Unretained(tooling_.get()));
   }
+
+  {
+    VLOG(9)
+      << "registered annotation method:"
+         " squaretsCodeAndReplace";
+    CHECK(tooling_);
+    annotationMethods["{squaretsCodeAndReplace};"] =
+      base::BindRepeating(
+        &Tooling::squaretsCodeAndReplace
+        , base::Unretained(tooling_.get()));
+  }
+
+  {
+    VLOG(9)
+      << "registered annotation method:"
+         " squaretsFile";
+    CHECK(tooling_);
+    annotationMethods["{squaretsFile};"] =
+      base::BindRepeating(
+        &Tooling::squaretsFile
+        , base::Unretained(tooling_.get()));
+  }
+
+  /// \todo support string replacement to generated template
+  /// (i.e. annotation near "")
+  //std:::string a
+  //  = __attribute__((annotate("{gen};{squarets};CXTPL;int hsdf;" ))){"sfd"};
 }
 
 #if defined(CLING_IS_ON)

@@ -21,3 +21,8 @@ include(HelperFlextool)
 add_executable(testme
     main.cpp
 )
+
+target_link_libraries(testme PRIVATE
+  ${USED_3DPARTY_LIBS}
+  ${USED_SYSTEM_LIBS}
+)

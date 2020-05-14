@@ -270,6 +270,7 @@ if(NOT TARGET CONAN_PKG::flexlib)
 endif()
 
 list(APPEND USED_3DPARTY_LIBS
+  CONAN_PKG::squarets
   CONAN_PKG::flexlib
   CONAN_PKG::basis
   CONAN_PKG::clang_folly_conan
@@ -468,6 +469,8 @@ target_compile_definitions(${LIB_NAME} PRIVATE
   BOOST_SYSTEM_NO_DEPRECATED BOOST_ERROR_CODE_HEADER_ONLY
   # see https://github.com/mosra/corrade/blob/af9d4216f07307a2dff471664eed1e50e180568b/modules/UseCorrade.cmake#L568
   CORRADE_DYNAMIC_PLUGIN=1
+  # dummy to supress warning in editor
+  TEST_TEMPLATE_FILE_PATH=""
 )
 
 target_compile_definitions(${LIB_NAME} PUBLIC
@@ -490,10 +493,10 @@ if(ENABLE_TESTS)
     ${CONAN_FLEX_REFLECT_PLUGIN_ROOT}/lib/flex_reflect_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
   )
   message(STATUS "flex_reflect_plugin=${flex_reflect_plugin}")
-  set(flex_meta_plugin
-    ${CONAN_FLEX_META_PLUGIN_ROOT}/lib/flex_meta_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
-  )
-  message(STATUS "flex_meta_plugin=${flex_meta_plugin}")
+  #set(flex_meta_plugin
+  #  ${CONAN_FLEX_META_PLUGIN_ROOT}/lib/flex_meta_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
+  #)
+  #message(STATUS "flex_meta_plugin=${flex_meta_plugin}")
   set(cling_includes
     ${CONAN_CLING_CONAN_ROOT}/include
   )
@@ -551,6 +554,11 @@ if(ENABLE_TESTS)
   #    VERBATIM # to support \t for example
   #)
 
+  set(TEST_TEMPLATE_FILE_PATH
+    # usage: --extra-arg=-DTEST_PATH="${TEST_PATH}"
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/code_generation/example.cxtpl
+  )
+
   add_custom_command(TARGET ${LIB_NAME}
       POST_BUILD
       COMMAND ${flextool}
@@ -570,6 +578,7 @@ if(ENABLE_TESTS)
             --extra-arg=-I${basis_headers}
             --extra-arg=-I${flexlib_headers}
             --extra-arg=-Wno-undefined-inline
+            --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
             ${flextool_extra_args}
             ${flextool_input_files}
             --cling_scripts=${flex_support_headers}

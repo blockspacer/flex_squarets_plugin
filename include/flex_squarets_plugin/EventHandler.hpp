@@ -12,6 +12,8 @@
 
 namespace plugin {
 
+/// \note class name must not collide with
+/// class names from other loaded plugins
 class FlexSquaretsEventHandler {
 public:
   FlexSquaretsEventHandler();

@@ -1,0 +1,8 @@
+int example1 = 1;
+[[~]] std::cout << example1;
+std::cout << [[* std::to_string(example1) *]];
+[[~
+std::string baar;
+~]][[~]]/*no newline*/
+std::cout << [[+ std::to_string(example1) +]];
+
