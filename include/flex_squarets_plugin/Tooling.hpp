@@ -11,16 +11,18 @@
 
 namespace plugin {
 
-class Tooling {
+/// \note class name must not collide with
+/// class names from other loaded plugins
+class SquaretsTooling {
 public:
-  Tooling(
+  SquaretsTooling(
     const ::plugin::ToolPlugin::Events::RegisterAnnotationMethods& event
 #if defined(CLING_IS_ON)
     , ::cling_utils::ClingInterpreter* clingInterpreter
 #endif // CLING_IS_ON
   );
 
-  ~Tooling();
+  ~SquaretsTooling();
 
   // extracts template code from annotated varible
   void squarets(
@@ -56,7 +58,7 @@ private:
 
   SEQUENCE_CHECKER(sequence_checker_);
 
-  DISALLOW_COPY_AND_ASSIGN(Tooling);
+  DISALLOW_COPY_AND_ASSIGN(SquaretsTooling);
 };
 
 } // namespace plugin

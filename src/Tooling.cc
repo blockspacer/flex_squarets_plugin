@@ -289,7 +289,7 @@ static void executeCodeInInterpreter(
 
 } // namespace
 
-Tooling::Tooling(
+SquaretsTooling::SquaretsTooling(
   const ::plugin::ToolPlugin::Events::RegisterAnnotationMethods& event
 #if defined(CLING_IS_ON)
   , ::cling_utils::ClingInterpreter* clingInterpreter
@@ -308,12 +308,12 @@ Tooling::Tooling(
     = &sourceTransformPipeline.sourceTransformRules;
 }
 
-Tooling::~Tooling()
+SquaretsTooling::~SquaretsTooling()
 {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 }
 
-void Tooling::squaretsCodeAndReplace(
+void SquaretsTooling::squaretsCodeAndReplace(
   const std::string& processedAnnotation
   , clang::AnnotateAttr* annotateAttr
   , const clang_utils::MatchResult& matchResult
@@ -464,7 +464,7 @@ void Tooling::squaretsCodeAndReplace(
 #endif // CLING_IS_ON
 }
 
-void Tooling::squaretsFile(
+void SquaretsTooling::squaretsFile(
   const std::string& processedAnnotation
   , clang::AnnotateAttr* annotateAttr
   , const clang_utils::MatchResult& matchResult
@@ -624,7 +624,7 @@ void Tooling::squaretsFile(
   );
 }
 
-void Tooling::squarets(
+void SquaretsTooling::squarets(
   const std::string& processedAnnotation
   , clang::AnnotateAttr* annotateAttr
   , const clang_utils::MatchResult& matchResult
