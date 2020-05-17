@@ -232,11 +232,11 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/)
 set(flex_squarets_plugin_include_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/flex_squarets_plugin")
 set(flex_squarets_plugin_src_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-include(cmake/PlatformChecks)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/PlatformChecks.cmake)
 
-include(cmake/CommonOptions)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CommonOptions.cmake)
 
-include(cmake/ProjectFiles)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ProjectFiles.cmake)
 
 add_library(${LIB_NAME}-test-includes INTERFACE)
 
@@ -479,7 +479,7 @@ target_compile_definitions(${LIB_NAME} PUBLIC
 )
 
 # install and export steps
-include(cmake/Exports)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Exports.cmake)
 
 if(ENABLE_TESTS)
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -535,8 +535,8 @@ if(ENABLE_TESTS)
 
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_SOURCE_DIR}/conf/${LIB_NAME}.conf
-            ${CMAKE_BINARY_DIR}/${LIB_NAME}.conf
+            ${CMAKE_CURRENT_SOURCE_DIR}/conf/${LIB_NAME}.conf
+            ${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}.conf
   )
 
   #execute_process(
