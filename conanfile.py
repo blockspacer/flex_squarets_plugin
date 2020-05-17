@@ -1,4 +1,4 @@
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, CMake, tools, python_requires
 import traceback
 import os
 import shutil
@@ -21,7 +21,9 @@ from distutils.util import strtobool
 # package(),
 # package_info()
 
-class flex_squarets_plugin_conan_project(ConanFile):
+conan_build_helper = python_requires("conan_build_helper/[~=0.0]@conan/stable")
+
+class flex_squarets_plugin_conan_project(conan_build_helper.CMakePackage):
     name = "flex_squarets_plugin"
 
     version = "master"
@@ -143,27 +145,6 @@ class flex_squarets_plugin_conan_project(ConanFile):
     #settings = "os", "compiler", "build_type", "arch"
     settings = "os_build", "os", "arch", "compiler", "build_type", "arch_build"
 
-    # build-only option
-    # see https://github.com/conan-io/conan/issues/6967
-    # conan ignores changes in environ, so
-    # use `conan remove` if you want to rebuild package
-    def _environ_option(self, name, default = 'true'):
-      env_val = default.lower() # default, must be lowercase!
-      # allow both lowercase and uppercase
-      if name.upper() in os.environ:
-        env_val = os.getenv(name.upper())
-      elif name.lower() in os.environ:
-        env_val = os.getenv(name.lower())
-      # strtobool:
-      #   True values are y, yes, t, true, on and 1;
-      #   False values are n, no, f, false, off and 0.
-      #   Raises ValueError if val is anything else.
-      #   see https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool
-      return bool(strtobool(env_val))
-
-    def _is_tests_enabled(self):
-      return self._environ_option("ENABLE_TESTS", default = 'true')
-
     #def source(self):
     #  url = "https://github.com/....."
     #  self.run("git clone %s ......." % url)
@@ -221,15 +202,9 @@ class flex_squarets_plugin_conan_project(ConanFile):
         else:
           self.output.error('Disabled BUILD_SHARED_LIBS')
 
-        def add_cmake_option(var_name, value):
-            value_str = "{}".format(value)
-            var_value = "ON" if bool(strtobool(value_str.lower())) else "OFF"
-            self.output.info('added cmake definition %s = %s' % (var_name, var_value))
-            cmake.definitions[var_name] = var_value
+        self.add_cmake_option(cmake, "ENABLE_TESTS", self._is_tests_enabled())
 
-        add_cmake_option("ENABLE_TESTS", self._is_tests_enabled())
-
-        add_cmake_option("ENABLE_SANITIZERS", self.options.enable_sanitizers)
+        self.add_cmake_option(cmake, "ENABLE_SANITIZERS", self.options.enable_sanitizers)
 
         cmake.configure(build_folder=self._build_subfolder)
 
@@ -254,6 +229,10 @@ class flex_squarets_plugin_conan_project(ConanFile):
         self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
         cmake = self._configure_cmake()
         cmake.install()
+        # Local build
+        # see https://docs.conan.io/en/latest/developing_packages/editable_packages.html
+        if not self.in_local_cache:
+            self.copy("conanfile.py", dst=".", keep_path=False)
 
     def build(self):
         cmake = self._configure_cmake()
@@ -276,7 +255,7 @@ class flex_squarets_plugin_conan_project(ConanFile):
 
         if self._is_tests_enabled():
           self.output.info('Running tests')
-          cmake.build(args=["--target", "run_all_tests", "--", "-j%s" % cpu_count])
+          cmake.build(args=["--target", "flex_squarets_plugin_run_all_tests", "--", "-j%s" % cpu_count])
           #self.run('ctest --parallel %s' % (cpu_count))
           # TODO: use cmake.test()
 

@@ -32,7 +32,7 @@ public:
     const ::plugin::ToolPlugin::Events::RegisterAnnotationMethods& event);
 
 private:
-  std::unique_ptr<Tooling> tooling_;
+  std::unique_ptr<SquaretsTooling> tooling_;
 
 #if defined(CLING_IS_ON)
   ::cling_utils::ClingInterpreter* clingInterpreter_;

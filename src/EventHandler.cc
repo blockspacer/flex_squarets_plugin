@@ -87,7 +87,7 @@ void FlexSquaretsEventHandler::RegisterAnnotationMethods(
   DCHECK(clingInterpreter_);
 #endif // CLING_IS_ON
 
-  tooling_ = std::make_unique<Tooling>(
+  tooling_ = std::make_unique<SquaretsTooling>(
     event
 #if defined(CLING_IS_ON)
     , clingInterpreter_
@@ -112,7 +112,7 @@ void FlexSquaretsEventHandler::RegisterAnnotationMethods(
     CHECK(tooling_);
     annotationMethods["{squarets};"] =
       base::BindRepeating(
-        &Tooling::squarets
+        &SquaretsTooling::squarets
         , base::Unretained(tooling_.get()));
   }
 
@@ -123,7 +123,7 @@ void FlexSquaretsEventHandler::RegisterAnnotationMethods(
     CHECK(tooling_);
     annotationMethods["{squaretsCodeAndReplace};"] =
       base::BindRepeating(
-        &Tooling::squaretsCodeAndReplace
+        &SquaretsTooling::squaretsCodeAndReplace
         , base::Unretained(tooling_.get()));
   }
 
@@ -134,7 +134,7 @@ void FlexSquaretsEventHandler::RegisterAnnotationMethods(
     CHECK(tooling_);
     annotationMethods["{squaretsFile};"] =
       base::BindRepeating(
-        &Tooling::squaretsFile
+        &SquaretsTooling::squaretsFile
         , base::Unretained(tooling_.get()));
   }
 
