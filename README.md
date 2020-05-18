@@ -21,7 +21,7 @@ Default template engine syntax (CXTPL) allows to rewrite code above as:
 
 ```cpp
 const std::string myVariable = "test";
-$squaretsString(
+_squaretsString(
   R"raw(
     something [[+ myVariable +]]
   )raw"
@@ -29,7 +29,7 @@ $squaretsString(
 std::string mystring;
 ``
 
-Where `$squaretsString` defined as `attribute annotate` (see `#define` below)
+Where `_squaretsString` defined as `attribute annotate` (see `#define` below)
 
 After code generation `mystring` will store text `something test`.
 
@@ -101,7 +101,8 @@ CONAN_REVISIONS_ENABLED=1 \
             -s build_type=${build_type} -s cling_conan:build_type=Release \
             --build=missing \
             --profile clang \
-                -e enable_tests=True \
+                -o flex_squarets_plugin:enable_clang_from_conan=False \
+                -e flex_squarets_plugin:enable_tests=True \
                 ..
 
 # configure via cmake
@@ -202,27 +203,27 @@ Example before code generation:
 // provide template code in __VA_ARGS__
 /// \note you can use \n to add newline
 /// \note does not support #define, #include in __VA_ARGS__
-#define $squarets(...) \
+#define _squarets(...) \
   __attribute__((annotate("{gen};{squarets};CXTPL;" #__VA_ARGS__ )))
 
 // squaretsString
 /// \note may use `#include` e.t.c.
 // example:
-//   $squaretsString("#include <cling/Interpreter/Interpreter.h>")
-#define $squaretsString(...) \
+//   _squaretsString("#include <cling/Interpreter/Interpreter.h>")
+#define _squaretsString(...) \
   __attribute__((annotate("{gen};{squarets};CXTPL;" __VA_ARGS__)))
 
 // example:
-//   $squaretsFile("file/path/here")
+//   _squaretsFile("file/path/here")
 /// \note FILE_PATH can be defined by CMakeLists
 /// and passed to flextool via
 /// --extra-arg=-DFILE_PATH=...
-#define $squaretsFile(...) \
+#define _squaretsFile(...) \
   __attribute__((annotate("{gen};{squaretsFile};CXTPL;" __VA_ARGS__)))
 
 // uses Cling to execute arbitrary code at compile-time
 // and run squarets on result returned by executed code
-#define $squaretsCodeAndReplace(...) \
+#define _squaretsCodeAndReplace(...) \
   /* generate definition required to use __attribute__ */ \
   __attribute__((annotate("{gen};{squaretsCodeAndReplace};CXTPL;" #__VA_ARGS__)))
 
@@ -231,7 +232,7 @@ int main(int argc, char* argv[]) {
   {
     // squarets will generate code from template
     // and append it after annotated variable
-    $squarets(
+    _squarets(
       int a;\n
       [[~]] int b;\n
       /// \note does not support #define, #include in __VA_ARGS__
@@ -247,7 +248,7 @@ int main(int argc, char* argv[]) {
     /// \note you must use escape like \"
     /// to insert quote into "" (as usual)
     /// or you can use R"raw()raw" string
-    $squaretsString(
+    _squaretsString(
       "int a;\n"
       "[[~]] int b;\n"
       "/// \note supports #define, #include in __VA_ARGS__"
@@ -261,7 +262,7 @@ int main(int argc, char* argv[]) {
     // squarets will generate code from template
     // and append it after annotated variable
     /// \note uses R"raw()raw" string
-    $squaretsString(
+    _squaretsString(
       R"raw(int a;
       [[~]] int b;
       /// \note supports #define, #include in __VA_ARGS__"
@@ -277,7 +278,7 @@ int main(int argc, char* argv[]) {
     /// \note uses Cling C++ interpreter
     /// to return template code combined from multiple std::string
     /// at compile-time
-    $squaretsCodeAndReplace(
+    _squaretsCodeAndReplace(
       [&clangMatchResult, &clangRewriter, &clangDecl]() {
         std::string a = R"raw(int g = 123;)raw";
         std::string b = R"raw(int s = 354;)raw";
@@ -315,7 +316,7 @@ std::cout << [[+ std::to_string(example1) +]];
     /// \note FILE_PATH defined by CMakeLists
     /// and passed to flextool via
     /// --extra-arg=-DFILE_PATH=...
-    $squaretsFile(
+    _squaretsFile(
       TEST_TEMPLATE_FILE_PATH
     )
     std::string out{""};
@@ -333,27 +334,27 @@ Generated code:
 // provide template code in __VA_ARGS__
 /// \note you can use \n to add newline
 /// \note does not support #define, #include in __VA_ARGS__
-#define $squarets(...) \
+#define _squarets(...) \
   __attribute__((annotate("{gen};{squarets};CXTPL;" #__VA_ARGS__ )))
 
 // squaretsString
 /// \note may use `#include` e.t.c.
 // example:
-//   $squaretsString("#include <cling/Interpreter/Interpreter.h>")
-#define $squaretsString(...) \
+//   _squaretsString("#include <cling/Interpreter/Interpreter.h>")
+#define _squaretsString(...) \
   __attribute__((annotate("{gen};{squarets};CXTPL;" __VA_ARGS__)))
 
 // example:
-//   $squaretsFile("file/path/here")
+//   _squaretsFile("file/path/here")
 /// \note FILE_PATH can be defined by CMakeLists
 /// and passed to flextool via
 /// --extra-arg=-DFILE_PATH=...
-#define $squaretsFile(...) \
+#define _squaretsFile(...) \
   __attribute__((annotate("{gen};{squaretsFile};CXTPL;" __VA_ARGS__)))
 
 // uses Cling to execute arbitrary code at compile-time
 // and run squarets on result returned by executed code
-#define $squaretsCodeAndReplace(...) \
+#define _squaretsCodeAndReplace(...) \
   /* generate definition required to use __attribute__ */ \
   __attribute__((annotate("{gen};{squaretsCodeAndReplace};CXTPL;" #__VA_ARGS__)))
 
@@ -362,7 +363,7 @@ int main(int argc, char* argv[]) {
   {
     // squarets will generate code from template
     // and append it after annotated variable
-    $squarets(
+    _squarets(
       int a;\n
       [[~]] int b;\n
       /// \note does not support #define, #include in __VA_ARGS__
@@ -390,7 +391,7 @@ R"raw( int c = "123";
     /// \note you must use escape like \"
     /// to insert quote into "" (as usual)
     /// or you can use R"raw()raw" string
-    $squaretsString(
+    _squaretsString(
       "int a;\n"
       "[[~]] int b;\n"
       "/// \note supports #define, #include in __VA_ARGS__"
@@ -417,7 +418,7 @@ ote supports #define, #include in __VA_ARGS__#define A 1int c = "123";
     // squarets will generate code from template
     // and append it after annotated variable
     /// \note uses R"raw()raw" string
-    $squaretsString(
+    _squaretsString(
       R"raw(int a;
       [[~]] int b;
       /// \note supports #define, #include in __VA_ARGS__"
@@ -446,7 +447,7 @@ R"raw(      /// \note supports #define, #include in __VA_ARGS__"
     /// \note uses Cling C++ interpreter
     /// to return template code combined from multiple std::string
     /// at compile-time
-    $squaretsCodeAndReplace(
+    _squaretsCodeAndReplace(
       [&clangMatchResult, &clangRewriter, &clangDecl]() {
         std::string a = R"raw(int g = 123;)raw";
         std::string b = R"raw(int s = 354;)raw";
@@ -497,7 +498,7 @@ std::cout << [[+ std::to_string(example1) +]];
     /// \note FILE_PATH defined by CMakeLists
     /// and passed to flextool via
     /// --extra-arg=-DFILE_PATH=...
-    $squaretsFile(
+    _squaretsFile(
       TEST_TEMPLATE_FILE_PATH
     )
     std::string out{""};

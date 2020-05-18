@@ -29,6 +29,10 @@
 #include <base/strings/string_util.h>
 #include <base/trace_event/trace_event.h>
 
+#if !defined(CORRADE_DYNAMIC_PLUGIN)
+#error "plugin must be shared library with CORRADE_DYNAMIC_PLUGIN=1"
+#endif  // CORRADE_DYNAMIC_PLUGIN
+
 namespace plugin {
 
 /// \note class name must not collide with

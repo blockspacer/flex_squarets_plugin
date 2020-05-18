@@ -157,34 +157,7 @@ macro(tests_add_executable target source_list TEST_ARGS TEST_LIB)
   endif()
 endmacro()
 
-set(test_main_catch "${ROOT_PROJECT_NAME}-test_main_catch")
-add_library( ${test_main_catch} OBJECT
-  main.cpp
-  #${${ROOT_PROJECT_NAME}_SRCS} # all source files  of root project without main.cpp
-  #${THIRDPARTY_SOURCES}
-  testsCommon.h # include in IDE
-  )
-
 set(test_main_gtest "${ROOT_PROJECT_NAME}-test_main_gtest")
-set_property(TARGET ${test_main_catch} PROPERTY CXX_STANDARD 17)
-
-# ensure that dependencies build before <target> does.
-add_dependencies(${test_main_catch} ${ROOT_PROJECT_LIB})
-
-set_test_compile_options( ${test_main_catch} )
-
-target_link_libraries(${test_main_catch} PUBLIC
-  # 3dparty libs
-  ${TESTS_3DPARTY_LIBS}
-  # system libs
-  ${USED_SYSTEM_LIBS}
-  # main project lib
-  ${ROOT_PROJECT_LIB}
-)
-
-target_compile_definitions( ${test_main_catch} PUBLIC
-  "-DUSE_CATCH_TEST=1" )
-
 add_library( ${test_main_gtest} OBJECT
   main.cpp
   #${${ROOT_PROJECT_NAME}_SRCS} # all source files  of root project without main.cpp
@@ -233,23 +206,11 @@ option(${ROOT_PROJECT_NAME}_BUILD_TESTS "Enable tests" ON)
 if(${ROOT_PROJECT_NAME}_BUILD_TESTS)
   message( "${PROJECT_NAME} testing enabled" )
 
-  set ( pimpl_deps
-    pimpl.test.cpp
-  )
-  tests_add_executable(${ROOT_PROJECT_NAME}-pimpl
-    "${pimpl_deps}" "${CATCH2_TEST_ARGS}" "${test_main_catch}")
-
   set ( gmock_deps
     gmock.test.cpp
   )
   tests_add_executable(${ROOT_PROJECT_NAME}-gmock
     "${gmock_deps}" "${GTEST_TEST_ARGS}" "${test_main_gtest}")
-
-  set ( fakeit_deps
-    fakeit.test.cpp
-  )
-  tests_add_executable(${ROOT_PROJECT_NAME}-fakeit
-    "${fakeit_deps}" "${CATCH2_TEST_ARGS}" "${test_main_catch}")
 endif()
 
 #add_to_tests_list(utils)
@@ -257,12 +218,6 @@ endif()
 
 #tests_add_executable(check_all ${UNIT_TEST_SOURCE_LIST} ${GTEST_TEST_ARGS})
 #message(FATAL_ERROR ${UNIT_TEST_SOURCE_LIST})
-
-# "pimpl" is one of test program names
-add_custom_command( TARGET ${ROOT_PROJECT_NAME}-pimpl POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                        ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_BINARY_DIR}/bin/$<CONFIG>/tests/data )
-
 enable_testing()
 
 # Run ALL tests with verbose output
@@ -273,6 +228,10 @@ add_custom_target(${ROOT_PROJECT_NAME}_run_all_tests
 foreach(target IN LISTS ALL_TESTS_LIST_VERBOSE)
   add_dependencies(${ROOT_PROJECT_NAME}_run_all_tests ${target})
 endforeach()
+
+add_custom_command( TARGET ${ROOT_PROJECT_NAME}_run_all_tests POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_BINARY_DIR}/bin/$<CONFIG>/tests/data )
 
 option(ENABLE_CODE_COVERAGE "ENABLE CODE COVERAGE" OFF)
 if (ENABLE_CODE_COVERAGE)

@@ -13,16 +13,22 @@ set(LIB_NAME ${PROJECT_NAME})
 
 option(ENABLE_TESTS "Enable tests" OFF)
 
-set(BUILD_SHARED_LIBS
+# Hack to depend NOT on CONAN_PKG::libname, but on libname directly
+# See for details
+# https://docs.conan.io/en/latest/developing_packages/workspaces.html
+set(LOCAL_BUILD FALSE CACHE BOOL "LOCAL_BUILD")
+message(STATUS "LOCAL_BUILD=${LOCAL_BUILD}")
+
+set(${PROJECT_NAME}_BUILD_SHARED_LIBS
   TRUE CACHE BOOL
   "Use .so/.dll")
 
-if(BUILD_SHARED_LIBS)
+if(${PROJECT_NAME}_BUILD_SHARED_LIBS)
   set(CORE_LIB_TYPE SHARED)
 else()
   set(CORE_LIB_TYPE STATIC)
   message(FATAL_ERROR "ONLY SHARED PLUGINS SUPPORTED FOR NOW")
-endif(BUILD_SHARED_LIBS)
+endif(${PROJECT_NAME}_BUILD_SHARED_LIBS)
 
 set(ENABLE_CLING TRUE CACHE BOOL "ENABLE_CLING")
 message(STATUS "ENABLE_CLING=${ENABLE_CLING}")
@@ -108,8 +114,7 @@ message(STATUS "${FetchContent_conan_auto_install}_SOURCE_DIR = ${${FetchContent
 message(STATUS "${FetchContent_conan_auto_install}_BINARY_DIR = ${${FetchContent_conan_auto_install}_BINARY_DIR}")
 include(${${FetchContent_conan_auto_install}_SOURCE_DIR}/conan-auto-install.cmake)
 option(CONAN_AUTO_INSTALL "Let CMake call conan install automatically"
-  #OFF # disable by default cause llvm requires long build with CONAN_LLVM_SINGLE_THREAD_BUILD=1
-  ON
+  OFF
 )
 if (CONAN_AUTO_INSTALL)
   set(CONAN_PROFILE
@@ -254,6 +259,7 @@ endmacro(add_relative_include_dir)
 # NOTE: cling does not support static libs, so we use SHARED
 # https://github.com/root-project/cling/issues/280
 # https://gitlab.kitware.com/cmake/cmake/issues/16473
+message(STATUS "flex_squarets_plugin_SOURCES=${flex_squarets_plugin_SOURCES}")
 add_library(${LIB_NAME} ${CORE_LIB_TYPE}
   ${flex_squarets_plugin_SOURCES}
 )
@@ -268,10 +274,22 @@ list(APPEND USED_3DPARTY_LIBS
 if(NOT TARGET CONAN_PKG::flexlib)
   message(FATAL_ERROR "Use flexlib from conan")
 endif()
+set(flexlib CONAN_PKG::flexlib)
+if(LOCAL_BUILD)
+  set(flexlib flexlib)
+endif(LOCAL_BUILD)
+
+if(NOT TARGET CONAN_PKG::squarets)
+  message(FATAL_ERROR "Use squarets from conan")
+endif()
+set(squarets CONAN_PKG::squarets)
+if(LOCAL_BUILD)
+  set(squarets squarets)
+endif(LOCAL_BUILD)
 
 list(APPEND USED_3DPARTY_LIBS
-  CONAN_PKG::squarets
-  CONAN_PKG::flexlib
+  ${squarets}
+  ${flexlib}
   CONAN_PKG::basis
   CONAN_PKG::clang_folly_conan
   CONAN_PKG::boost
@@ -325,6 +343,10 @@ set(USED_SYSTEM_LIBS
 target_link_libraries(${LIB_NAME} PUBLIC#PRIVATE
   ${USED_3DPARTY_LIBS}
   ${USED_SYSTEM_LIBS}
+)
+
+target_link_libraries(${LIB_NAME} PRIVATE
+  CONAN_PKG::entt
 )
 
 set(DEBUG_LIBRARY_SUFFIX "")
@@ -481,6 +503,22 @@ target_compile_definitions(${LIB_NAME} PUBLIC
 # install and export steps
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Exports.cmake)
 
+if(LOCAL_BUILD)
+  # for builds with conan workspace
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/conf/${LIB_NAME}.conf
+            ${CMAKE_BINARY_DIR}/${LIB_NAME}.conf
+  )
+endif(LOCAL_BUILD)
+
+# for builds without conan
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${CMAKE_CURRENT_SOURCE_DIR}/conf/${LIB_NAME}.conf
+          ${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}.conf
+)
+
 if(ENABLE_TESTS)
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -488,10 +526,20 @@ if(ENABLE_TESTS)
   list(APPEND CMAKE_PROGRAM_PATH ${CONAN_BIN_DIRS})
   # TODO: make better: link lib dirs
   link_directories(${CONAN_LIB_DIRS})
-  include(HelperFlextool) # requires list(APPEND CMAKE_PROGRAM_PATH ${CONAN_BIN_DIRS})
-  set(flex_reflect_plugin
-    ${CONAN_FLEX_REFLECT_PLUGIN_ROOT}/lib/flex_reflect_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
-  )
+  #
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HelperFlextool.cmake)
+  #
+  if(LOCAL_BUILD)
+    get_property(flex_reflect_plugin_location TARGET flex_reflect_plugin PROPERTY LIBRARY_OUTPUT_DIRECTORY)
+    message (STATUS "flex_reflect_plugin_location == ${flex_reflect_plugin_location}")
+    set(flex_reflect_plugin
+      ${flex_reflect_plugin_location}/flex_reflect_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
+    )
+  else()
+    set(flex_reflect_plugin
+      ${CONAN_FLEX_REFLECT_PLUGIN_ROOT}/lib/flex_reflect_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
+    )
+  endif()
   message(STATUS "flex_reflect_plugin=${flex_reflect_plugin}")
   #set(flex_meta_plugin
   #  ${CONAN_FLEX_META_PLUGIN_ROOT}/lib/flex_meta_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
@@ -532,12 +580,6 @@ if(ENABLE_TESTS)
   get_property(${LIB_NAME}_location TARGET "${LIB_NAME}" PROPERTY LIBRARY_OUTPUT_DIRECTORY)
   set(${LIB_NAME}_file "${${LIB_NAME}_location}/${LIB_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
   message (STATUS "${LIB_NAME} file == ${${LIB_NAME}_file}")
-
-  execute_process(
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/conf/${LIB_NAME}.conf
-            ${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}.conf
-  )
 
   #execute_process(
   #  COMMAND ${CMAKE_COMMAND} -E copy_if_different
