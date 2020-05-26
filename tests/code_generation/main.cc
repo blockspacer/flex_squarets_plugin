@@ -6,6 +6,13 @@
 #define _squarets(...) \
   __attribute__((annotate("{gen};{squarets};CXTPL;" #__VA_ARGS__ )))
 
+// executes arbitrary template code in Cling interpreter and
+// replaces original code with template execution result
+// (execution result is arbitrary string, it may be not C++ code)
+/// \note template WILL be interpreted by Cling
+#define _interpretSquarets(...) \
+  __attribute__((annotate("{gen};{interpretSquarets};CXTPL;" __VA_ARGS__ )))
+
 // squaretsString
 /// \note may use `#include` e.t.c.
 // example:
@@ -27,8 +34,8 @@
   /* generate definition required to use __attribute__ */ \
   __attribute__((annotate("{gen};{squaretsCodeAndReplace};CXTPL;" #__VA_ARGS__)))
 
-int main(int argc, char* argv[]) {
-
+static void somefunc()
+{
   {
     // squarets will generate code from template
     // and append it after annotated variable
@@ -122,5 +129,16 @@ std::cout << [[+ std::to_string(example1) +]];
     std::string out{""};
   }
 
-  return 0;
+  {
+    struct
+    _interpretSquarets(
+      R"raw(
+          // generate struct with same name as original
+          struct [[+ classInfoPtr->name +]]
+          {};
+        )raw"
+    )
+    SomeStruct
+    {};
+  }
 }

@@ -42,7 +42,22 @@ public:
 
   // executes arbitrary C++ code in Cling interpreter to
   // get template code
+  // squarets will generate code from template
+  // and append it after annotated variable
+  /// \note template will be NOT interpreted by Cling,
+  /// but we assume that it will be returned from Cling
   void squaretsCodeAndReplace(
+    const std::string& processedAnnotaion
+    , clang::AnnotateAttr* annotateAttr
+    , const clang_utils::MatchResult& matchResult
+    , clang::Rewriter& rewriter
+    , const clang::Decl* nodeDecl);
+
+  // executes arbitrary template code in Cling interpreter and
+  // replaces original code with template execution result
+  // (execution result is arbitrary string, it may be not C++ code)
+  /// \note template WILL be interpreted by Cling
+  void interpretSquarets(
     const std::string& processedAnnotaion
     , clang::AnnotateAttr* annotateAttr
     , const clang_utils::MatchResult& matchResult

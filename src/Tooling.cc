@@ -142,8 +142,8 @@ static std::string runTemplateParser(
         << " info: "
         << genResult.error().extra_info
         << " input data: "
-        /// \note limit to first 200 symbols
-        << processedAnnotation.substr(0, 200)
+        /// \note limit to first N symbols
+        << processedAnnotation.substr(0, 1000)
         << "...";
     }
     CHECK(false);
@@ -220,8 +220,71 @@ static void insertCodeAfterPos(
     /*InsertAfter=*/true, /*IndentNewLines*/ false);
 }
 
+static void replaceCodeAfterPos(
+  const std::string& processedAnnotation
+  , clang::AnnotateAttr* annotateAttr
+  , const clang_utils::MatchResult& matchResult
+  , clang::Rewriter& rewriter
+  , const clang::Decl* nodeDecl
+  , clang::SourceLocation& nodeStartLoc
+  , clang::SourceLocation& nodeEndLoc
+  , const std::string& codeToInsert
+){
+  clang::SourceManager &SM
+    = rewriter.getSourceMgr();
+
+  const clang::LangOptions& langOptions
+    = rewriter.getLangOpts();
+
+  clang_utils::expandLocations(
+    nodeStartLoc, nodeEndLoc, rewriter);
+
+  clang::CharSourceRange charSourceRange(
+    clang::SourceRange{nodeStartLoc, nodeEndLoc},
+    true // IsTokenRange
+  );
+
+#if defined(DEBUG_VERBOSE_PLUGIN)
+  if(charSourceRange.isValid()) {
+    StringRef sourceText
+      = clang::Lexer::getSourceText(
+          charSourceRange
+          , SM, langOptions, 0);
+    DCHECK(nodeStartLoc.isValid());
+    VLOG(9)
+      << "(squarets) original code: "
+      << sourceText.str()
+      << " at "
+      << nodeStartLoc.printToString(SM);
+  } else {
+    DCHECK(nodeStartLoc.isValid());
+    LOG(ERROR)
+      << "variable declaration with"
+         " annotation of type squarets"
+         " must have initializer"
+         " that is valid: "
+      << nodeStartLoc.printToString(SM);
+    return;
+  }
+#endif // DEBUG_VERBOSE_PLUGIN
+
+  // MeasureTokenLength gets us past the last token,
+  // and adding 1 gets us past the ';'
+  int offset = clang::Lexer::MeasureTokenLength(
+    nodeEndLoc,
+    SM,
+    langOptions) + 1;
+
+  clang::SourceLocation realEnd
+    = nodeEndLoc.getLocWithOffset(offset);
+
+  rewriter.ReplaceText(
+    clang::SourceRange{nodeStartLoc, realEnd}, codeToInsert);
+}
+
 static void executeCodeInInterpreter(
   ::cling_utils::ClingInterpreter* clingInterpreter_
+  // for debug
   , const std::string& processedAnnotation
   , clang::AnnotateAttr* annotateAttr
   , const clang_utils::MatchResult& matchResult
@@ -229,6 +292,7 @@ static void executeCodeInInterpreter(
   , const clang::Decl* nodeDecl
   , const base::StringPiece16& codeToExecute
   , cling::Value& result
+  , const std::string& extraVariables = ""
 ){
   std::ostringstream sstr;
   // populate variables that can be used by interpreted code:
@@ -238,6 +302,13 @@ static void executeCodeInInterpreter(
   {
     // scope begin
     sstr << "[](){";
+
+    sstr << "clang::AnnotateAttr*"
+            " clangAnnotateAttr = ";
+    sstr << cling_utils::passCppPointerIntoInterpreter(
+      reinterpret_cast<void*>(annotateAttr)
+      , "(clang::AnnotateAttr*)");
+    sstr << ";";
 
     sstr << "const clang::ast_matchers::MatchFinder::MatchResult&"
             " clangMatchResult = ";
@@ -261,6 +332,8 @@ static void executeCodeInInterpreter(
       , "(const clang::Decl*)");
     sstr << ";";
 
+    sstr << extraVariables;
+
     // vars end
     sstr << "return ";
     sstr << codeToExecute << ";";
@@ -282,7 +355,10 @@ static void executeCodeInInterpreter(
     {
       LOG(ERROR)
         << "ERROR while running cling code:"
-        << processedAnnotation.substr(0, 1000);
+        << codeToExecute.substr(0, 10000)
+        << " from annotation:"
+        << processedAnnotation.substr(0, 10000)
+        << "...";
     }
   }
 }
@@ -313,6 +389,220 @@ SquaretsTooling::~SquaretsTooling()
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 }
 
+void SquaretsTooling::interpretSquarets(
+  const std::string& processedAnnotation
+  , clang::AnnotateAttr* annotateAttr
+  , const clang_utils::MatchResult& matchResult
+  , clang::Rewriter& rewriter
+  , const clang::Decl* nodeDecl)
+{
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  TRACE_EVENT0("toplevel",
+               "plugin::FlexSquarets::interpretSquarets");
+
+#if defined(CLING_IS_ON)
+  DCHECK(clingInterpreter_);
+#endif // CLING_IS_ON
+
+  DCHECK(nodeDecl);
+
+  VLOG(9)
+    << "squarets called...";
+
+  clang::SourceManager &SM
+    = rewriter.getSourceMgr();
+
+  const clang::LangOptions& langOptions
+    = rewriter.getLangOpts();
+
+  std::string nodeName;
+
+  const clang::CXXRecordDecl* nodeRecordDecl =
+    matchResult.Nodes.getNodeAs<
+      clang::CXXRecordDecl>("bind_gen");
+
+  if(nodeRecordDecl) {
+    nodeName = nodeRecordDecl->getNameAsString();
+  } else {
+    CHECK(false)
+      << "interpretSquarets error: "
+         "node must be CXXRecordDecl";
+  }
+
+  DCHECK(!nodeName.empty());
+
+  VLOG(9)
+    << "(squarets) nodeDecl name: "
+    << nodeName;
+
+  VLOG(9)
+    << "(squarets) nodeDecl processedAnnotation: "
+    << processedAnnotation;
+
+  clang::SourceLocation nodeStartLoc
+    = nodeDecl->getLocStart();
+  // Note Stmt::getLocEnd() returns the source location prior to the
+  // token at the end of the line.  For instance, for:
+  // var = 123;
+  //      ^---- getLocEnd() points here.
+  clang::SourceLocation nodeEndLoc
+    = nodeDecl->getLocEnd();
+  DCHECK(nodeStartLoc != nodeEndLoc);
+
+  base::string16 contentsUTF16
+    = base::UTF8ToUTF16(processedAnnotation);
+
+  base::StringPiece16 clean_contents = contentsUTF16;
+
+  bool isCleaned
+    = removeSyntaxPrefix(
+        nodeStartLoc
+        , kAnnotationCXTPL
+        , base::size(kAnnotationCXTPL)
+        , SM
+        , clean_contents);
+  DCHECK(isCleaned);
+
+  VLOG(9)
+    << "(squarets) nodeVarDecl clean_contents: "
+    << clean_contents;
+
+  DCHECK(!nodeName.empty());
+  std::string squaretsProcessedAnnotation
+    = runTemplateParser(
+        // name of output variable in generated code
+        nodeName
+        // template to parse
+        , clean_contents
+        // initial annotation code, for logging
+        , processedAnnotation);
+
+  if(squaretsProcessedAnnotation.empty()) {
+    DCHECK(nodeStartLoc.isValid());
+    LOG(ERROR)
+      << "variable declaration with"
+         " annotation of type squarets"
+         " must be valid: "
+      << nodeStartLoc.printToString(SM);
+  }
+
+#if defined(CLING_IS_ON)
+  // execute code stored in annotation
+  cling::Value result;
+
+  std::string codeToExecute;
+
+  {
+    /// \note lambda will be returned
+    codeToExecute += "[&](){";
+
+    codeToExecute += "std::string ";
+
+    // name of output variable in generated code
+    codeToExecute += nodeName;
+
+    codeToExecute += ";";
+
+    DCHECK(!squaretsProcessedAnnotation.empty());
+    codeToExecute += squaretsProcessedAnnotation;
+
+    codeToExecute += "return new llvm::Optional<std::string>{"
+                     "std::move(";
+    codeToExecute += nodeName;
+    codeToExecute += ")"
+                     "}; ";
+
+    codeToExecute += "}();";
+  }
+
+  std::ostringstream sstr;
+
+  /// \todo support custom namespaces
+  reflection::NamespacesTree m_namespaces;
+
+  reflection::AstReflector reflector(
+    matchResult.Context);
+
+  /// \note scope prolongs lifetime
+  reflection::ClassInfoPtr classInfoPtr;
+
+  if(nodeRecordDecl)
+  {
+    classInfoPtr
+      = reflector.ReflectClass(
+          nodeRecordDecl
+          , &m_namespaces
+          , false // recursive
+        );
+    DCHECK(classInfoPtr);
+
+    sstr << "const reflection::ClassInfo*"
+            " classInfoPtr = ";
+    sstr << cling_utils::passCppPointerIntoInterpreter(
+      reinterpret_cast<void*>(const_cast<reflection::ClassInfo*>(classInfoPtr.get()))
+      , "(const reflection::ClassInfo*)");
+    sstr << ";";
+  } // if nodeRecordDecl
+
+  const std::string extraVarables
+    = sstr.str();
+
+  base::string16 codeToExecuteUTF16
+    = base::UTF8ToUTF16(codeToExecute);
+
+  base::StringPiece16 codeToExecute16 = codeToExecuteUTF16;
+
+  executeCodeInInterpreter(
+    clingInterpreter_
+    , processedAnnotation // for debug
+    , annotateAttr
+    , matchResult
+    , rewriter
+    , nodeDecl
+    , codeToExecute16
+    , result
+    , extraVarables
+  );
+
+  if(result.hasValue() && result.isValid()
+        && !result.isVoid())
+  {
+    void* resOptionVoid = result.getAs<void*>();
+    auto resOption =
+    static_cast<llvm::Optional<std::string>*>(resOptionVoid);
+    if(resOption && resOption->hasValue()) {
+      DCHECK(!resOption->getValue().empty());
+      replaceCodeAfterPos(
+        processedAnnotation
+        , annotateAttr
+        , matchResult
+        , rewriter
+        , nodeDecl
+        , nodeStartLoc
+        , nodeEndLoc
+        , resOption->getValue()
+      );
+    } else {
+      LOG(ERROR)
+        << "interpretSquarets: ."
+        << " Nothing provided";
+      DCHECK(false);
+    }
+    delete resOption; /// \note frees resOptionVoid memory
+  } else {
+    DLOG(INFO)
+      << "ignored invalid "
+         "Cling result "
+         "for processedAnnotation: "
+      << processedAnnotation;
+  }
+#else
+  LOG(WARNING)
+    << "Unable to execute C++ code at runtime: "
+    << "Cling is disabled.";
+#endif // CLING_IS_ON
+}
+
 void SquaretsTooling::squaretsCodeAndReplace(
   const std::string& processedAnnotation
   , clang::AnnotateAttr* annotateAttr
@@ -322,7 +612,7 @@ void SquaretsTooling::squaretsCodeAndReplace(
 {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   TRACE_EVENT0("toplevel",
-               "plugin::FlexReflect::process_squaretsCodeAndReplace");
+               "plugin::FlexSquarets::process_squaretsCodeAndReplace");
 
   DCHECK(nodeDecl);
 
@@ -368,7 +658,8 @@ void SquaretsTooling::squaretsCodeAndReplace(
     << "(squarets) nodeVarDecl clean_contents: "
     << clean_contents;
 
-  /// VarDecl - An instance of this class is created to represent a variable
+  /// VarDecl - An instance of this class is created
+  /// to represent a variable
   /// declaration or definition.
   const clang::VarDecl* nodeVarDecl =
     matchResult.Nodes.getNodeAs<
@@ -386,7 +677,8 @@ void SquaretsTooling::squaretsCodeAndReplace(
     return;
   }
 
-  const std::string nodeName = nodeVarDecl->getNameAsString();
+  const std::string nodeName
+    = nodeVarDecl->getNameAsString();
 
   DCHECK(!nodeName.empty());
 
@@ -394,13 +686,13 @@ void SquaretsTooling::squaretsCodeAndReplace(
     << "(squarets) nodeVarDecl name: "
     << nodeName;
 
+#if defined(CLING_IS_ON)
   // execute code stored in annotation
   cling::Value result;
 
-#if defined(CLING_IS_ON)
   executeCodeInInterpreter(
     clingInterpreter_
-    , processedAnnotation
+    , processedAnnotation // for debug
     , annotateAttr
     , matchResult
     , rewriter
@@ -448,6 +740,7 @@ void SquaretsTooling::squaretsCodeAndReplace(
       LOG(ERROR)
         << "squaretsCodeAndReplace: ."
         << " Nothing provided";
+      DCHECK(false);
     }
     delete resOption; /// \note frees resOptionVoid memory
   } else {
@@ -473,7 +766,7 @@ void SquaretsTooling::squaretsFile(
 {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   TRACE_EVENT0("toplevel",
-               "plugin::FlexReflect::callFuncBySignature");
+               "plugin::FlexSquarets::squaretsFile");
 
 #if defined(CLING_IS_ON)
   DCHECK(clingInterpreter_);
@@ -633,7 +926,7 @@ void SquaretsTooling::squarets(
 {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   TRACE_EVENT0("toplevel",
-               "plugin::FlexReflect::callFuncBySignature");
+               "plugin::FlexSquarets::callFuncBySignature");
 
 #if defined(CLING_IS_ON)
   DCHECK(clingInterpreter_);
@@ -689,84 +982,6 @@ void SquaretsTooling::squarets(
   clang::SourceLocation nodeEndLoc
     = nodeVarDecl->getLocEnd();
   DCHECK(nodeStartLoc != nodeEndLoc);
-
-#if 0
-  // source range of initializer
-  clang::SourceLocation initStartLoc;
-  clang::SourceLocation initEndLoc;
-
-  // source text of initializer
-  std::string sourceCode;
-
-  // get source text of RValue variable initializer
-  if(nodeVarDecl->hasInit()) {
-    const clang::Expr* varInit = nodeVarDecl->getInit();
-    if(varInit->isRValue()) {
-      clang::SourceRange varSourceRange
-        = varInit->getSourceRange();
-      clang::CharSourceRange charSourceRange(
-        varSourceRange,
-        true // IsTokenRange
-      );
-      initStartLoc = charSourceRange.getBegin();
-      initEndLoc = charSourceRange.getEnd();
-      if(varSourceRange.isValid()) {
-        StringRef sourceText
-          = clang::Lexer::getSourceText(
-              charSourceRange
-              , SM, langOptions, 0);
-        sourceCode = sourceText.str();
-        DCHECK(initStartLoc.isValid());
-        VLOG(9)
-          << "(squarets) nodeVarDecl RValue: "
-          << sourceCode
-          << " at "
-          << initStartLoc.printToString(SM);
-      } else {
-        DCHECK(initStartLoc.isValid());
-        LOG(ERROR)
-          << "variable declaration with"
-             " annotation of type squarets"
-             " must have initializer"
-             " that is RValue"
-             " and valid: "
-          << initStartLoc.printToString(SM);
-        CHECK(false);
-        return;
-      }
-    } else {
-      DCHECK(initStartLoc.isValid());
-      LOG(ERROR)
-        << "variable declaration with"
-           " annotation of type squarets"
-           " must have initializer"
-           " that is RValue: "
-        << initStartLoc.printToString(SM);
-      CHECK(false);
-      return;
-    }
-  } else {
-    DCHECK(initStartLoc.isValid());
-    LOG(ERROR)
-      << "variable declaration with"
-         " annotation of type squarets"
-         " must have initializer: "
-      << initStartLoc.printToString(SM);
-    CHECK(false);
-    return;
-  }
-
-  if(sourceCode.empty()) {
-    DCHECK(initStartLoc.isValid());
-    LOG(ERROR)
-      << "variable declaration with"
-         " annotation of type squarets"
-         " must have not empty initializer: "
-      << initStartLoc.printToString(SM);
-    CHECK(false);
-    return;
-  }
-#endif
 
   base::string16 contentsUTF16
     = base::UTF8ToUTF16(processedAnnotation);

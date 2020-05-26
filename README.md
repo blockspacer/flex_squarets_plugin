@@ -196,6 +196,39 @@ conan editable remove \
   flex_squarets_plugin/master@conan/stable
 ```
 
+## Example: Code generation with reflection
+
+```cpp
+  // original code
+  {
+    struct
+    _interpretSquarets(
+      R"raw(
+          // generate struct with same name as original
+          struct [[+ classInfoPtr->name +]]
+          {};
+        )raw"
+    )
+    SomeStruct
+    {};
+  }
+```
+
+```cpp
+  // generated code
+  {
+          // generate struct with same name as original
+          struct SomeStruct
+          {};
+  }
+```
+
+Here `classInfoPtr` stores reflection data for `SomeStruct`.
+
+See for details about `classInfoPtr` [https://github.com/blockspacer/flexlib/blob/f34248face8bc9a2cf80abe497d65b36db0bf923/include/flexlib/reflect/ReflTypes.hpp#L15](https://github.com/blockspacer/flexlib/blob/f34248face8bc9a2cf80abe497d65b36db0bf923/include/flexlib/reflect/ReflTypes.hpp#L15)
+
+For example, using `_interpretSquarets` you can re-write original `SomeStruct` with `SomeGeneratedStruct` that contains reflected property names.
+
 ## Usage
 
 Example before code generation:

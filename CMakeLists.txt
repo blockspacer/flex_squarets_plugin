@@ -573,7 +573,9 @@ if(ENABLE_TESTS)
     ${CONAN_CHROMIUM_BUILD_UTIL_ROOT}/include/chromium
   )
   message(STATUS "chromium_build_util_headers=${chromium_build_util_headers}")
-  set(flextool_input_files ${CMAKE_CURRENT_SOURCE_DIR}/tests/code_generation/main.cc)
+  set(flextool_input_files
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/code_generation/main.cc
+  )
   set(flextool_outdir ${CMAKE_BINARY_DIR})
   message(STATUS "flextool_outdir=${flextool_outdir}")
 
@@ -599,33 +601,6 @@ if(ENABLE_TESTS)
   set(TEST_TEMPLATE_FILE_PATH
     # usage: --extra-arg=-DTEST_PATH="${TEST_PATH}"
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/code_generation/example.cxtpl
-  )
-
-  add_custom_command(TARGET ${LIB_NAME}
-      POST_BUILD
-      COMMAND ${flextool}
-            --vmodule=*=200 --enable-logging=stderr --log-level=100
-            --indir=${CMAKE_CURRENT_SOURCE_DIR}
-            --outdir=${flextool_outdir}
-            #--load_plugin=${flex_meta_plugin}
-            --load_plugin=${flex_reflect_plugin}
-            --load_plugin=${${LIB_NAME}_file}
-            --extra-arg=-I${cling_includes}
-            --extra-arg=-I${clang_includes}
-            # NOTE: Cling does not support compile_commands.json
-            # so we must add headers used by `flex_support_headers` package
-            # place into `flex_support_headers` includes that can be used by Cling
-            --extra-arg=-I${chromium_base_headers}
-            --extra-arg=-I${chromium_build_util_headers}
-            --extra-arg=-I${basis_headers}
-            --extra-arg=-I${flexlib_headers}
-            --extra-arg=-Wno-undefined-inline
-            --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
-            ${flextool_extra_args}
-            ${flextool_input_files}
-            --cling_scripts=${flex_support_headers}
-      COMMENT "running ${flextool}"
-      VERBATIM # to support \t for example
   )
 
   #list(APPEND flex_meta_demo_SOURCES

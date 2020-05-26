@@ -130,6 +130,17 @@ void FlexSquaretsEventHandler::RegisterAnnotationMethods(
   {
     VLOG(9)
       << "registered annotation method:"
+         " interpretSquarets";
+    CHECK(tooling_);
+    annotationMethods["{interpretSquarets};"] =
+      base::BindRepeating(
+        &SquaretsTooling::interpretSquarets
+        , base::Unretained(tooling_.get()));
+  }
+
+  {
+    VLOG(9)
+      << "registered annotation method:"
          " squaretsFile";
     CHECK(tooling_);
     annotationMethods["{squaretsFile};"] =
