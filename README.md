@@ -13,13 +13,16 @@ Template engine output can be used to produce valid C++ code.
 Approach similar to javascript template literals:
 
 ```js
+// javascript template literals
 const myVariable = 'test'
 const mystring = `something ${myVariable}` //something test
-``
+```
 
 Default template engine syntax (CXTPL) allows to rewrite code above as:
 
 ```cpp
+// custom C++ template syntax using flex_squarets_plugin
+// After code generation `mystring` will store text `something test`.
 const std::string myVariable = "test";
 _squaretsString(
   R"raw(
@@ -35,7 +38,7 @@ After code generation `mystring` will store text `something test`.
 
 Note that generated code appends data to `mystring` via '+=', so `mystring` can not be const.
 
-Don not forget about indentation and '\n' as newline:
+Do not forget about indentation and '\n' as newline:
 
 ```cpp
   // will add extra spaces and newlines
