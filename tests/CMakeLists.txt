@@ -31,6 +31,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR};${${ROOT_PROJECT_NAME
 #          --extra-arg=-I${basis_headers}
 #          --extra-arg=-I${flexlib_headers}
 #          --extra-arg=-Wno-undefined-inline
+#          --extra-arg=-I${flextool_outdir}
 #          ${flextool_extra_args}
 #          ${flextool_input_files}
 #          --cling_scripts=${flex_support_headers}
@@ -189,6 +190,7 @@ add_custom_command(
           --extra-arg=-I${chromium_build_util_headers}
           --extra-arg=-I${basis_headers}
           --extra-arg=-I${flexlib_headers}
+          --extra-arg=-I${flextool_outdir}
           --extra-arg=-Wno-undefined-inline
           --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
           ${flextool_extra_args}
