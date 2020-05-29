@@ -191,6 +191,9 @@ add_custom_command(
           --extra-arg=-I${basis_headers}
           --extra-arg=-I${flexlib_headers}
           --extra-arg=-I${flextool_outdir}
+          # custom define for basis
+          --extra-arg=-DDISABLE_DOCTEST=1
+          --extra-arg=-DDOCTEST_CONFIG_DISABLE=1
           --extra-arg=-Wno-undefined-inline
           --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
           ${flextool_extra_args}
