@@ -271,13 +271,10 @@ list(APPEND USED_3DPARTY_LIBS
   ${build_util_LIB}
 )
 
-if(NOT TARGET CONAN_PKG::flexlib)
-  message(FATAL_ERROR "Use flexlib from conan")
+find_package(flexlib REQUIRED)
+if(${flexlib_HEADER_DIR} STREQUAL "")
+  message(FATAL_ERROR "unable to find flexlib_HEADER_DIR")
 endif()
-set(flexlib CONAN_PKG::flexlib)
-if(${PROJECT_NAME}_LOCAL_BUILD)
-  set(flexlib flexlib)
-endif(${PROJECT_NAME}_LOCAL_BUILD)
 
 if(NOT TARGET CONAN_PKG::squarets)
   message(FATAL_ERROR "Use squarets from conan")
@@ -287,26 +284,15 @@ if(${PROJECT_NAME}_LOCAL_BUILD)
   set(squarets squarets)
 endif(${PROJECT_NAME}_LOCAL_BUILD)
 
-if(NOT TARGET CONAN_PKG::basis)
-  message(FATAL_ERROR "Use basis from conan")
+find_package(basis REQUIRED)
+if(${basis_HEADER_DIR} STREQUAL "")
+  message(FATAL_ERROR "unable to find basis_HEADER_DIR")
 endif()
-set(basis CONAN_PKG::basis)
-set(basis_location ${CONAN_BASIS_ROOT})
-set(basis_headers
-  ${basis_location}/include
-)
-if(basis_LOCAL_BUILD)
-  set(basis basis)
-  set(basis_headers
-    ${CONAN_BASIS_ROOT}
-  )
-endif(basis_LOCAL_BUILD)
-message(STATUS "basis_headers=${basis_headers}")
 
 list(APPEND USED_3DPARTY_LIBS
   ${squarets}
-  ${flexlib}
-  ${basis}
+  ${flexlib_LIB}
+  ${basis_LIB}
   CONAN_PKG::clang_folly_conan
   CONAN_PKG::boost
   CONAN_PKG::double-conversion
@@ -469,22 +455,11 @@ if(ENABLE_TESTS)
   #
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HelperFlextool.cmake)
   #
-  if(${PROJECT_NAME}_LOCAL_BUILD)
-    get_property(flex_reflect_plugin_location TARGET flex_reflect_plugin PROPERTY LIBRARY_OUTPUT_DIRECTORY)
-    message (STATUS "flex_reflect_plugin_location == ${flex_reflect_plugin_location}")
-    set(flex_reflect_plugin
-      ${flex_reflect_plugin_location}/flex_reflect_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
-    )
-  else()
-    set(flex_reflect_plugin
-      ${CONAN_FLEX_REFLECT_PLUGIN_ROOT}/lib/flex_reflect_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
-    )
+  find_package(flex_reflect_plugin REQUIRED)
+  if(${flex_reflect_plugin_FILE} STREQUAL "")
+    message(FATAL_ERROR "unable to find flex_reflect_plugin_FILE")
   endif()
-  message(STATUS "flex_reflect_plugin=${flex_reflect_plugin}")
-  #set(flex_meta_plugin
-  #  ${CONAN_FLEX_META_PLUGIN_ROOT}/lib/flex_meta_plugin${CMAKE_SHARED_LIBRARY_SUFFIX}
-  #)
-  #message(STATUS "flex_meta_plugin=${flex_meta_plugin}")
+  #
   set(cling_includes
     ${CONAN_CLING_CONAN_ROOT}/include
   )
@@ -493,14 +468,12 @@ if(ENABLE_TESTS)
     ${CONAN_CLING_CONAN_ROOT}/lib/clang/5.0.0/include
   )
   message(STATUS "clang_includes=${clang_includes}")
-  set(flex_support_headers
-    ${CONAN_FLEX_SUPPORT_HEADERS_ROOT}/include/flex/cling_preloader.inc
-  )
-  message(STATUS "flex_support_headers=${flex_support_headers}")
-  set(flexlib_headers
-    ${CONAN_FLEXLIB_ROOT}/include
-  )
-  message(STATUS "flexlib_headers=${flexlib_headers}")
+  #
+  find_package(flex_support_headers REQUIRED)
+  if(${flex_support_header_HEADER_FILE} STREQUAL "")
+    message(FATAL_ERROR "unable to find flex_support_header_HEADER_FILE=${flex_support_header_HEADER_FILE}")
+  endif()
+  #
   set(chromium_base_headers
     ${CONAN_CHROMIUM_BASE_ROOT}/include
   )

@@ -13,36 +13,6 @@ set( ${PROJECT_NAME}_PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "${P
 #set_cmake_module_paths( ${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR};${${ROOT_PROJECT_NAME}_CMAKE_MODULE_PATH}" ) # from Utils.cmake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR};${${ROOT_PROJECT_NAME}_CMAKE_MODULE_PATH}")
 
-#execute_process(
-#  COMMAND ${flextool}
-#          --vmodule=*=200 --enable-logging=stderr --log-level=100
-#          --indir=${CMAKE_CURRENT_SOURCE_DIR}
-#          --outdir=${flextool_outdir}
-#          #--load_plugin ${flex_meta_plugin}
-#          --load_plugin=${flex_reflect_plugin}
-#          #--load_plugin ${${LIB_NAME}_file}
-#          --extra-arg=-I${cling_includes}
-#          --extra-arg=-I${clang_includes}
-#          # NOTE: Cling does not support compile_commands.json
-#          # so we must add headers used by `flex_support_headers` package
-#          # place into `flex_support_headers` includes that can be used by Cling
-#          --extra-arg=-I${chromium_base_headers}
-#          --extra-arg=-I${chromium_build_util_headers}
-#          --extra-arg=-I${basis_headers}
-#          --extra-arg=-I${flexlib_headers}
-#          --extra-arg=-Wno-undefined-inline
-#          --extra-arg=-I${flextool_outdir}
-#          ${flextool_extra_args}
-#          ${flextool_input_files}
-#          --cling_scripts=${flex_support_headers}
-#          #TIMEOUT 7200 # sec
-#  RESULT_VARIABLE retcode
-#  ERROR_VARIABLE _ERROR_VARIABLE)
-#if(NOT "${retcode}" STREQUAL "0")
-#  message(FATAL_ERROR "Bad exit status ${retcode} ${_ERROR_VARIABLE}")
-#endif()
-#message(STATUS "flextool output: ${retcode} ${_ERROR_VARIABLE}")
-
 if (ENABLE_CODE_COVERAGE)
   set( CATCH2_TEST_ARGS -r junit -o unit_test_result.xml )
 else()
@@ -178,8 +148,7 @@ add_custom_command(
           --vmodule=*=200 --enable-logging=stderr --log-level=100
           --indir=${CMAKE_CURRENT_SOURCE_DIR}
           --outdir=${flextool_outdir}
-          #--load_plugin=${flex_meta_plugin}
-          --load_plugin=${flex_reflect_plugin}
+          --load_plugin=${flex_reflect_plugin_FILE}
           --load_plugin=${${LIB_NAME}_file}
           --extra-arg=-I${cling_includes}
           --extra-arg=-I${clang_includes}
@@ -188,8 +157,8 @@ add_custom_command(
           # place into `flex_support_headers` includes that can be used by Cling
           --extra-arg=-I${chromium_base_headers}
           --extra-arg=-I${chromium_build_util_headers}
-          --extra-arg=-I${basis_headers}
-          --extra-arg=-I${flexlib_headers}
+          --extra-arg=-I${basis_HEADER_DIR}
+          --extra-arg=-I${flexlib_HEADER_DIR}
           --extra-arg=-I${flextool_outdir}
           # custom define for basis
           --extra-arg=-DDISABLE_DOCTEST=1
@@ -198,8 +167,8 @@ add_custom_command(
           --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
           ${flextool_extra_args}
           ${flextool_input_files}
-          --cling_scripts=${flex_support_headers}
-    COMMENT "running ${flextool}"
+          --cling_scripts=${flex_support_header_HEADER_FILE}
+    COMMENT "(flex_squarets_plugin) running ${flextool}"
     VERBATIM # to support \t for example
 )
 
