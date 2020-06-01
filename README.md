@@ -30,7 +30,7 @@ _squaretsString(
   )raw"
 )
 std::string mystring;
-``
+```
 
 Where `_squaretsString` defined as `attribute annotate` (see `#define` below)
 
