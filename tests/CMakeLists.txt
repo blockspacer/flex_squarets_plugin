@@ -261,7 +261,6 @@ if(${ROOT_PROJECT_NAME}_BUILD_TESTS)
 endif()
 
 #add_to_tests_list(utils)
-#add_to_tests_list(pimpl)
 
 #tests_add_executable(check_all ${UNIT_TEST_SOURCE_LIST} ${GTEST_TEST_ARGS})
 #message(FATAL_ERROR ${UNIT_TEST_SOURCE_LIST})
