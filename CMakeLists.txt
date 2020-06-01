@@ -16,8 +16,8 @@ option(ENABLE_TESTS "Enable tests" OFF)
 # Hack to depend NOT on CONAN_PKG::libname, but on libname directly
 # See for details
 # https://docs.conan.io/en/latest/developing_packages/workspaces.html
-set(LOCAL_BUILD FALSE CACHE BOOL "LOCAL_BUILD")
-message(STATUS "LOCAL_BUILD=${LOCAL_BUILD}")
+set(${PROJECT_NAME}_LOCAL_BUILD FALSE CACHE BOOL "${PROJECT_NAME}_LOCAL_BUILD")
+message(STATUS "${PROJECT_NAME}_LOCAL_BUILD=${${PROJECT_NAME}_LOCAL_BUILD}")
 
 set(${PROJECT_NAME}_BUILD_SHARED_LIBS
   TRUE CACHE BOOL
@@ -275,22 +275,38 @@ if(NOT TARGET CONAN_PKG::flexlib)
   message(FATAL_ERROR "Use flexlib from conan")
 endif()
 set(flexlib CONAN_PKG::flexlib)
-if(LOCAL_BUILD)
+if(${PROJECT_NAME}_LOCAL_BUILD)
   set(flexlib flexlib)
-endif(LOCAL_BUILD)
+endif(${PROJECT_NAME}_LOCAL_BUILD)
 
 if(NOT TARGET CONAN_PKG::squarets)
   message(FATAL_ERROR "Use squarets from conan")
 endif()
 set(squarets CONAN_PKG::squarets)
-if(LOCAL_BUILD)
+if(${PROJECT_NAME}_LOCAL_BUILD)
   set(squarets squarets)
-endif(LOCAL_BUILD)
+endif(${PROJECT_NAME}_LOCAL_BUILD)
+
+if(NOT TARGET CONAN_PKG::basis)
+  message(FATAL_ERROR "Use basis from conan")
+endif()
+set(basis CONAN_PKG::basis)
+set(basis_location ${CONAN_BASIS_ROOT})
+set(basis_headers
+  ${basis_location}/include
+)
+if(basis_LOCAL_BUILD)
+  set(basis basis)
+  set(basis_headers
+    ${CONAN_BASIS_ROOT}
+  )
+endif(basis_LOCAL_BUILD)
+message(STATUS "basis_headers=${basis_headers}")
 
 list(APPEND USED_3DPARTY_LIBS
   ${squarets}
   ${flexlib}
-  CONAN_PKG::basis
+  ${basis}
   CONAN_PKG::clang_folly_conan
   CONAN_PKG::boost
   CONAN_PKG::double-conversion
@@ -427,14 +443,14 @@ target_compile_definitions(${LIB_NAME} PUBLIC
 # install and export steps
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Exports.cmake)
 
-if(LOCAL_BUILD)
+if(${PROJECT_NAME}_LOCAL_BUILD)
   # for builds with conan workspace
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/conf/${LIB_NAME}.conf
             ${CMAKE_BINARY_DIR}/${LIB_NAME}.conf
   )
-endif(LOCAL_BUILD)
+endif(${PROJECT_NAME}_LOCAL_BUILD)
 
 # for builds without conan
 execute_process(
@@ -453,7 +469,7 @@ if(ENABLE_TESTS)
   #
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HelperFlextool.cmake)
   #
-  if(LOCAL_BUILD)
+  if(${PROJECT_NAME}_LOCAL_BUILD)
     get_property(flex_reflect_plugin_location TARGET flex_reflect_plugin PROPERTY LIBRARY_OUTPUT_DIRECTORY)
     message (STATUS "flex_reflect_plugin_location == ${flex_reflect_plugin_location}")
     set(flex_reflect_plugin
@@ -485,10 +501,6 @@ if(ENABLE_TESTS)
     ${CONAN_FLEXLIB_ROOT}/include
   )
   message(STATUS "flexlib_headers=${flexlib_headers}")
-  set(basis_headers
-    ${CONAN_BASIS_ROOT}/include
-  )
-  message(STATUS "basis_headers=${basis_headers}")
   set(chromium_base_headers
     ${CONAN_CHROMIUM_BASE_ROOT}/include
   )
