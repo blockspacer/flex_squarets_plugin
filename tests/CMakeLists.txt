@@ -138,36 +138,46 @@ set_source_files_properties(
   ${flextool_generated_files}
   PROPERTIES GENERATED 1)
 
+set(FULL_CMD
+  ${flextool}
+    --vmodule=*=200 --enable-logging=stderr --log-level=100
+    --indir=${CMAKE_CURRENT_SOURCE_DIR}
+    --outdir=${flextool_outdir}
+    --load_plugin=${flex_reflect_plugin_FILE}
+    --load_plugin=${${LIB_NAME}_file}
+    --extra-arg=-I${cling_includes}
+    --extra-arg=-I${clang_includes}
+    # NOTE: Cling does not support compile_commands.json
+    # so we must add headers used by `flex_support_headers` package
+    # place into `flex_support_headers` includes that can be used by Cling
+    --extra-arg=-I${chromium_base_headers}
+    --extra-arg=-I${chromium_build_util_headers}
+    --extra-arg=-I${basis_HEADER_DIR}
+    --extra-arg=-I${flexlib_HEADER_DIR}
+    --extra-arg=-I${flextool_outdir}
+    # custom define for basis
+    --extra-arg=-DDISABLE_DOCTEST=1
+    --extra-arg=-DDOCTEST_CONFIG_DISABLE=1
+    --extra-arg=-Wno-undefined-inline
+    --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
+    ${flextool_extra_args}
+    ${flextool_input_files}
+    --cling_scripts=${flex_support_header_HEADER_FILE}
+)
+
 add_custom_command(
     OUTPUT ${flextool_generated_files}
     # code generator COMMAND will only be launched
     # if some of DEPENDS files were changed.
     DEPENDS
       ${flextool_input_files}
-    COMMAND ${flextool}
-          --vmodule=*=200 --enable-logging=stderr --log-level=100
-          --indir=${CMAKE_CURRENT_SOURCE_DIR}
-          --outdir=${flextool_outdir}
-          --load_plugin=${flex_reflect_plugin_FILE}
-          --load_plugin=${${LIB_NAME}_file}
-          --extra-arg=-I${cling_includes}
-          --extra-arg=-I${clang_includes}
-          # NOTE: Cling does not support compile_commands.json
-          # so we must add headers used by `flex_support_headers` package
-          # place into `flex_support_headers` includes that can be used by Cling
-          --extra-arg=-I${chromium_base_headers}
-          --extra-arg=-I${chromium_build_util_headers}
-          --extra-arg=-I${basis_HEADER_DIR}
-          --extra-arg=-I${flexlib_HEADER_DIR}
-          --extra-arg=-I${flextool_outdir}
-          # custom define for basis
-          --extra-arg=-DDISABLE_DOCTEST=1
-          --extra-arg=-DDOCTEST_CONFIG_DISABLE=1
-          --extra-arg=-Wno-undefined-inline
-          --extra-arg=-DTEST_TEMPLATE_FILE_PATH="${TEST_TEMPLATE_FILE_PATH}"
-          ${flextool_extra_args}
-          ${flextool_input_files}
-          --cling_scripts=${flex_support_header_HEADER_FILE}
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -E
+      echo
+      "executing command: ${FULL_CMD}"
+    COMMAND
+      ${FULL_CMD}
     COMMENT "(flex_squarets_plugin) running ${flextool}"
     VERBATIM # to support \t for example
 )
