@@ -173,6 +173,17 @@ print_cmake_system_info() # from Utils.cmake
 
 check_supported_os() # from Utils.cmake
 
+find_package(cmake_helper_utils REQUIRED)
+
+# prefer ASCII for folder names
+force_latin_paths() # from cmake_helper_utils (conan package)
+
+# out dirs (CMAKE_*_OUTPUT_DIRECTORY) must be not empty
+validate_out_dirs() # from cmake_helper_utils (conan package)
+
+# In-source builds not allowed
+validate_out_source_build(WARNING) # from cmake_helper_utils (conan package)
+
 # Keep symbols for JIT resolution
 set(LLVM_NO_DEAD_STRIP 1)
 
@@ -424,6 +435,7 @@ target_compile_definitions(${LIB_NAME} PRIVATE
 target_compile_definitions(${LIB_NAME} PUBLIC
   ${flex_squarets_plugin_PUBLIC_DEFINES}
   ${CLING_DEFINITIONS}
+  DISABLE_DOCTEST=1
 )
 
 # install and export steps
@@ -470,8 +482,8 @@ if(ENABLE_TESTS)
   message(STATUS "clang_includes=${clang_includes}")
   #
   find_package(flex_support_headers REQUIRED)
-  if(${flex_support_header_HEADER_FILE} STREQUAL "")
-    message(FATAL_ERROR "unable to find flex_support_header_HEADER_FILE=${flex_support_header_HEADER_FILE}")
+  if(${flex_support_headers_HEADER_FILE} STREQUAL "")
+    message(FATAL_ERROR "unable to find flex_support_headers_HEADER_FILE=${flex_support_headers_HEADER_FILE}")
   endif()
   #
   set(chromium_base_headers
