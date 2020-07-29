@@ -533,5 +533,5 @@ if(ENABLE_TESTS)
   #  ${flex_meta_demo_SOURCES}
   #)
 
-  add_subdirectory( tests )
+  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/tests )
 endif()
