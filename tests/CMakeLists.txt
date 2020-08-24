@@ -148,6 +148,11 @@ get_all_include_directories(collected_includes
   ${ROOT_PROJECT_LIB}
 )
 
+if(NOT EXISTS "${TEST_TEMPLATE_FILE_PATH}")
+  message(WARNING
+    "unable to find TEST_TEMPLATE_FILE_PATH file = ${TEST_TEMPLATE_FILE_PATH}")
+endif()
+
 set(FULL_CMD
   ${flextool}
     --vmodule=*=200 --enable-logging=stderr --log-level=100
@@ -160,7 +165,11 @@ set(FULL_CMD
     # NOTE: Cling does not support compile_commands.json
     # so we must add headers used by `flex_support_headers` package
     # place into `flex_support_headers` includes that can be used by Cling
-    #--extra-arg=-I${chromium_base_headers}
+    --extra-arg=-I${chromium_base_headers}
+    # TODO: (hack) we want `base/logging.h` from `chromium_base`, not from `chromium_tcmalloc`
+    # so we included `chromium_base` manually BEFORE `collected_includes`
+    # Bug reproduced only in conan workspace mode (seems `collected_includes` does not respect PRIVATE or PUBLIC).
+    --extra-arg=-I${chromium_base_HEADER_DIR}
     #--extra-arg=-I${chromium_build_util_headers}
     #--extra-arg=-I${basis_HEADER_DIR}
     #--extra-arg=-I${flexlib_HEADER_DIR}
