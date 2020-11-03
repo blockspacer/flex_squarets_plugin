@@ -205,7 +205,7 @@ class flex_squarets_plugin_conan_project(conan_build_helper.CMakePackage):
       # \note dispatcher must be thread-safe,
       # so use entt after patch https://github.com/skypjack/entt/issues/449
       # see https://github.com/skypjack/entt/commit/74f3df83dbc9fc4b43b8cfb9d71ba02234bd5c4a
-      self.requires("entt/3.4.0")
+      self.requires("entt/3.5.2")
 
     def _configure_cmake(self):
         cmake = CMake(self)
